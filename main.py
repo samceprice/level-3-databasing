@@ -4,16 +4,25 @@ import sqlite3
 import csv
 
 class main:
+    # Setup databse
     def __init__ (self):
         connect = sqlite3.connect('Database.db')
         self.cursor = connect.cursor()
 
+        self._remove_tables()
+        self._create_tables()
+        self._populate_tables_from_csv()
+
+    # Removes previously setup tables for rerunability
+    def _remove_tables(self):
         self.cursor.execute("DROP TABLE IF EXISTS 'Students';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Teachers';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Enrollments';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Courese';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Classroom';")
 
+    # Sets up all tables for the database
+    def _create_tables(self):
         self.cursor.execute("""
             CREATE TABLE Students (
             student_id INTERGER NOT NULL PRIMARY KEY,
@@ -67,30 +76,64 @@ class main:
             );
         """)
 
+    # Populates tables for the database with base data from csv files
+    def _populate_tables_from_csv(self):
+        self._import_csv('csv/classrooms_with_pk.csv', 'Classroom',
+            ['classroom_id', 'room_number', 'capacity', 'building_name'])
+        self._import_csv('csv/teachers_with_pk.csv', 'Teachers',
+            ['teacher_id', 'first_name', 'last_name', 'department', 'email'])
+        self._import_csv('csv/students_with_pk.csv', 'Students',
+            ['student_id', 'first_name', 'last_name', 'date_of_birth', 'email'])
+        self._import_csv('csv/courses_detailed_with_ids.csv', 'Courese',
+            ['course_id', 'course_name', 'description', 'credits', 'classroom_id', 'teacher_id'])
+        self._import_csv('csv/enrollments_with_pk.csv', 'Enrollments',
+            ['enrollment_id', 'student_id', 'course_id', 'enrollment_date'])
+
+    # Internal Funciton to import csv into a table from given data
+    def _import_csv(self, csv_path, table_name, columns):
+        """Read a CSV file and insert every row into the given table."""
+        with open(csv_path, newline='', encoding='utf-8') as csv_file:
+            reader = csv.DictReader(csv_file)
+            rows = [tuple(row[column] for column in columns) for row in reader]
+
+        placeholders = ', '.join('?' for _ in columns)
+        column_list = ', '.join(columns)
+        insert_sql = f"INSERT INTO {table_name} ({column_list}) VALUES ({placeholders});"
+        self.cursor.executemany(insert_sql, rows)
+
+
+    # Adds student to the Student table from inputed information
     def add_student(self):
         pass
 
+    #Adds teacher to the Teacher table from inputed information
     def add_teacher(self):
         pass
 
+    # Adds course to the Course table from inputed information
     def add_course(self):
         pass
 
+    # Adds classroom to the Classroom table from inputed information
     def add_classroom(self):
         pass
 
+    # Assigns student to a given course from inputed infomation
     def assign_student_to_course(self):
         pass
 
+    # Assigns teacher to a given course from inputed infomation
     def assign_teacher_to_course(self):
         pass
 
+    # Assigns classroom to a given course from inputed infomation
     def assign_classroom_to_course(self):
         pass
 
-    def run(self):
-        pass
+
+def run():
+    databse = main
+
 
 if __name__ == "__main__":
-    program = main()
-    program.run()
+    run()
