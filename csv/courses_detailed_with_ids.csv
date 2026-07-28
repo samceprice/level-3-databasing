@@ -1,0 +1,11 @@
+course_id,course_name,description,credits,classroom_id,teacher_id
+1,Mathematics,Basic Mathematics,3,5,9
+2,Science,Introduction to Science,4,1,4
+3,History,World History,3,7,6
+4,English,English Literature,3,5,7
+5,Art,Art and Design,2,3,5
+6,Physical Education,Fitness and Health,2,1,4
+7,Biology,Introduction to Biology,4,4,1
+8,Chemistry,Basics of Chemistry,4,6,1
+9,Physics,Fundamentals of Physics,4,3,9
+10,Music,Music Theory,2,7,4
