@@ -2,9 +2,10 @@
 """
 import sqlite3
 import csv
+import re
 import datetime
 
-class main:
+class Database:
     # Setup databse
     def __init__ (self):
         self.connect = sqlite3.connect('Database.db')
@@ -13,9 +14,6 @@ class main:
         self._remove_tables()
         self._create_tables()
         self._populate_tables_from_csv()
-
-        self.connect.commit()
-        self.connect.close()
 
     # Removes previously setup tables for rerunability
     def _remove_tables(self):
@@ -104,58 +102,21 @@ class main:
         insert_sql = f"INSERT INTO {table_name} ({column_list}) VALUES ({placeholders});"
         self.cursor.executemany(insert_sql, rows)
 
-    # Adds student to the Student table from inputed information
-    def add_student(self):
-        """ student_id INTERGER NOT NULL PRIMARY KEY,
-            first_name STRING NOT NULL,
-            last_name STRING NOT NULL,
-            date_of_birth STRING NOT NULL,
-            email STRING NOT NULL"""
-        pass
-
-
-
-    #Adds teacher to the Teacher table from inputed information
-    def add_teacher(self):
-        pass
-
-    # Adds course to the Course table from inputed information
-    def add_course(self):
-        pass
-
-    # Adds classroom to the Classroom table from inputed information
-    def add_classroom(self):
-        pass
-
-    # Assigns student to a given course from inputed infomation
-    def assign_student_to_course(self):
-        pass
-
-    # Assigns teacher to a given course from inputed infomation
-    def assign_teacher_to_course(self):
-        pass
-
-    # Assigns classroom to a given course from inputed infomation
-    def assign_classroom_to_course(self):
-        pass
-
-    # Search for a list of courses with the room and teacher based on a students name
-    def search_course_by_student(self):
-        pass
-
-    # Search for a list of students based on a teachers name
-    def search_student_by_teacher(self):
-        pass
+    # Add data into a given table table
+    def _add_into_table(self, table, columns: list, data: list):
+        column_names = ", ".join(columns)
+        placeholders = ", ".join(["?"] * len(data))
+        query = f"INSERT INTO {table} ({column_names}) VALUES ({placeholders})"
+        self.cursor.execute(query, data)
 
     # Gets user input as a string and checks for required characters present in input   
-    def _get_string_input(self, prompt, required_characters = []):
+    def _get_string_input(self, prompt):
         while True:
-            user_input = input(prompt)
-            if len(required_characters) >= 1:
-                for character in required_characters:
-                    if character not in user_input:
-                        print ("invalid input")
-                        continue
+            user_input = input(prompt).strip()
+            if len(user_input) <= 0:
+                print("Please enter a non blank input")
+                continue            
+            return user_input
 
     # Gets user input as an interger and checks its within range
     def _get_int_input(self, prompt, minimum = None, maximum = None):
@@ -185,8 +146,26 @@ class main:
             except ValueError:
                 print ("Please enter a valid input")
 
+    # Gets user input for an email and checks it matches email syntax
+    def _get_email_input(self, prompt):
+        while True:
+            user_input = input(prompt)
+            if self._is_valid_email(user_input):
+                return user_input
+            else:
+                print("Please enter a valid email")
 
-    # Gets user input as a date and checks its a real date
+    # Checks if a given email matches corect email syntax
+    def _is_valid_email(email):
+        # Syntax patern of an email   
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    
+        # Use fullmatch to ensure email matches syntax and trailing characters aren't accepted
+        if re.fullmatch(pattern, email):
+            return True
+        return False
+
+    # Gets user input for a date and checks its a real date
     def _get_date_input(self, prompt):
         # return as yyyy-mm-dd
         while True:
@@ -211,10 +190,92 @@ class main:
         
         except ValueError:
             return False
+    
+    # Adds student to the Student table from inputed information
+    def add_student(self):
+        self._add_into_table(
+            "Students",
+            ["first_name", "last_name", "date_of_birth", "email"],
+            [
+                self._get_string_input("Enter the students first name: ").title(),
+                self._get_string_input("Enter the students last name: ").title(),
+                self._get_date_input("students date of birth: "),
+                self._get_email_input("Enter the students email: ")
+            ] 
+        )
+
+    #Adds teacher to the Teacher table from inputed information
+    def add_teacher(self):
+        self._add_into_table(
+            "Teachers",
+            ["first_name", "last_name", "department", "email"],
+            [
+                self._get_string_input("Enter the teachers first name: ").title(),
+                self._get_string_input("Enter the teachers last name: ").title(),
+                self._get_string_input("Enter the teachers department: ").title(),
+                self._get_email_input("Enter the teachers email: ")
+            ]
+        )
+
+    # Adds course to the Course table from inputed information
+    def add_course(self):
+        self._add_into_table(
+            "Course",
+            ["course_name", "description", "credits", "classroom_id", "teacher_id"],
+            [
+                self._get_string_input("Enter the name of the course: "),
+                self._get_string_input("Enter the description of the course: "),
+                self._get_int_input("Enter the number of credits for the course: ", minimum = 0),
+                self._get_int_input("Enter the classroom id for the course: ", minimum = 0),
+                self._get_int_input("senter the teacher id for the course: ", minimum = 0)
+            ]
+        )
+
+    # Adds classroom to the Classroom table from inputed information
+    def add_classroom(self):
+        """
+            classroom_id INTERGER NOT NULL PRIMARY KEY,
+            room_number INTERGER NOT NULL,
+            capacity INTERGER NOT NULL,
+            building_name STRING NOT NULL
+        """
+        self._add_into_table(
+            "Classroom",
+            ["room_number", "capacity", "building_name"],
+            [
+                self._get_int_input("Enter the room number for the classroom: ", minimum = 1),
+                self._get_int_input("Enter the capacity for the classroom: ", minimum = 1),
+                self._get_string_input("Enter the name of the building for the classroom: ")
+            ]
+        )
+
+    # Assigns student to a given course from inputed infomation
+    def assign_student_to_course(self):
+        pass
+
+    # Assigns teacher to a given course from inputed infomation
+    def assign_teacher_to_course(self):
+        pass
+
+    # Assigns classroom to a given course from inputed infomation
+    def assign_classroom_to_course(self):
+        pass
+
+    # Search for a list of courses with the room and teacher based on a students name
+    def search_course_by_student(self):
+        pass
+
+    # Search for a list of students based on a teachers name
+    def search_student_by_teacher(self):
+        pass
+
 
 def run():
-    databse = main()
+    databse = Database()
+    databse.connect.commit()
+    databse.connect.close()
     
 
 if __name__ == "__main__":
     run()
+    
