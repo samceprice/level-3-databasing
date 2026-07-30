@@ -7,7 +7,7 @@ import datetime
 
 class Database:
     # Setup databse
-    def __init__ (self):
+    def __init__(self):
         self.connect = sqlite3.connect('Database.db')
         self.cursor = self.connect.cursor()
 
@@ -56,8 +56,8 @@ class Database:
             );
         """)
 
-        self.cursor.execute("""
-            CREATE TABLE Courese (
+        self.cursor.execute(""" courese
+            CREATE TABLE Course (
             course_id INTERGER NOT NULL PRIMARY KEY,
             course_name STRING NOT NULL,
             description STRING NOT NULL,
@@ -108,6 +108,58 @@ class Database:
         placeholders = ", ".join(["?"] * len(data))
         query = f"INSERT INTO {table} ({column_names}) VALUES ({placeholders})"
         self.cursor.execute(query, data)
+
+    # Changes a data point in a column at the point of the given id
+    def _change_data_in_table(self, table, column, id, data):
+        self.cursor.execute(
+            f"UPDATE {table} SET {column} = ? WHERE rowid = ?",
+            (data, id)
+        )
+
+    # Gets primary key from a 
+    def _query_primary_key(self, table, search_columns, text_queries, operator):
+        # Checks if a single value has been passed in for the colums instead of a list and converts it to a list
+        if not isinstance(search_columns, list):
+            search_columns = [search_columns]
+        # Checks if a single value has been passed in for the text queries instead of a list and converts it to a list
+        if not isinstance(text_queries, list):
+            text_queries = [text_queries]
+
+        # Check that columns and values have the same lenth
+        if len(search_columns) != len(text_queries):
+            raise ValueError("Number of search columns must match number of query values")
+
+        # Sets conditions
+        conditions = f" {operator} ".join([f"{column} = ?" for column in search_columns])
+        query = f"SELECT rowid FROM {table} WHERE {conditions}"
+        self.cursor.execute(query, tuple(text_queries))
+
+        results = self.cursor.fetchall()
+
+        # Checks for a single result
+        if len(results) == 1:
+            return results[0][0]
+
+        # Checks for multiple results and settles them
+        elif len(results) > 1:
+            print("Multiple results have been found:")
+            for result in results:
+                print(f"    {result[0]}")
+
+            while True:
+                result_to_use = self._get_int_input(
+                    "Enter the id that you would like to proceed with: ",
+                    minimum=0
+                )
+
+                if (result_to_use,) in results:
+                    return result_to_use
+                else:
+                    print("Please enter an id from the given results")
+
+        #  Fallback if no results found
+        else:
+            return None
 
     # Gets user input as a string and checks for required characters present in input   
     def _get_string_input(self, prompt):
@@ -183,14 +235,72 @@ class Database:
                print ("please enter a valid date")
 
     # Checks if a date is valid
-    def _is_valid_date (year, month, day):
+    def _is_valid_date(year, month, day):
         try:
             datetime.date(year, month, day)
             return True
         
         except ValueError:
             return False
-    
+
+    # Gets the id of a student from the first and last name
+    def _get_student_id(self):
+        while True:
+            student_id = self._query_primary_key(
+                "Teachers",
+                ["first_name", "last_name"],
+                [
+                    self._get_string_input("Please enter the first name of the student to search: "),
+                    self._get_string_input("Please enter the last name of the student to search: ")
+                ]                
+            )
+            if student_id is not None:
+                return student_id
+            else:
+                print("No student with that name found please try a name that is in the database")
+
+    # Gets the id of a teacher from the first and last name
+    def _get_teacher_id(self):
+        while True:
+            teacher_id = self._query_primary_key(
+                "Teachers",
+                ["first_name", "last_name"],
+                [
+                    self._get_string_input("Please enter the first name of the teacher to search: "),
+                    self._get_string_input("Please enter the last name of the teacher to search: ")
+                ]                
+            )
+            if teacher_id is not None:
+                return teacher_id
+            else:
+                print("No teacher with that name found please try a name that is in the database")
+
+    # gets the id of a course from its name
+    def _get_course_id(self):
+        while True:
+            course_id = self._query_primary_key(
+                "Course",
+                "course_name",
+                self._get_string_input("Enter the name of the course to search for: ")
+            )
+            if course_id is not None:
+                return course_id
+            else:
+                print("No course with that name found please enter a course name that is in the database")
+
+    # Gets the id of a classroom from its room number
+    def _get_classroom_id(self):
+        while True:
+            classroom_id = self._query_primary_key(
+                "Classroom",
+                "room_number",
+                self._get_int_input("Enter the room number of the classroom to search: ")
+            )
+            if classroom_id is not None:
+                return classroom_id
+            else:
+                print("No classroom with that room number found please enter a room number that is in the database")
+
     # Adds student to the Student table from inputed information
     def add_student(self):
         self._add_into_table(
@@ -226,19 +336,13 @@ class Database:
                 self._get_string_input("Enter the name of the course: "),
                 self._get_string_input("Enter the description of the course: "),
                 self._get_int_input("Enter the number of credits for the course: ", minimum = 0),
-                self._get_int_input("Enter the classroom id for the course: ", minimum = 0),
-                self._get_int_input("senter the teacher id for the course: ", minimum = 0)
+                self._get_classroom_id(),
+                self._get_teacher_id()
             ]
         )
 
     # Adds classroom to the Classroom table from inputed information
     def add_classroom(self):
-        """
-            classroom_id INTERGER NOT NULL PRIMARY KEY,
-            room_number INTERGER NOT NULL,
-            capacity INTERGER NOT NULL,
-            building_name STRING NOT NULL
-        """
         self._add_into_table(
             "Classroom",
             ["room_number", "capacity", "building_name"],
@@ -251,23 +355,43 @@ class Database:
 
     # Assigns student to a given course from inputed infomation
     def assign_student_to_course(self):
-        pass
+        self._add_into_table(
+            "Enrollments",
+            ["student_id", "course_id", "enrollment_date"],
+            [
+                self._get_student_id(),
+                self._get_course_id(),
+                self._get_date_input("enrollment date: ")
+            ]
+        )
 
     # Assigns teacher to a given course from inputed infomation
     def assign_teacher_to_course(self):
-        pass
+        self._change_data_in_table(
+            "Course",
+            "teacher_id",
+            self._get_course_id(),
+            self._get_teacher_id()
+        )
 
     # Assigns classroom to a given course from inputed infomation
     def assign_classroom_to_course(self):
-        pass
+        self._change_data_in_table(
+            "Course",
+            "classroom_id",
+            self._get_course_id(),
+            self._get_classroom_id()
+        )
 
     # Search for a list of courses with the room and teacher based on a students name
     def search_course_by_student(self):
-        pass
+        student_id = self._get_student_id()
+        
+
 
     # Search for a list of students based on a teachers name
     def search_student_by_teacher(self):
-        pass
+        teacher_id = self._get_teacher_id()
 
 
 def run():
