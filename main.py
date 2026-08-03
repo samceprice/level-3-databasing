@@ -28,7 +28,7 @@ class Database:
     def _create_tables(self):
         self.cursor.execute("""
             CREATE TABLE Students (
-            student_id INTERGER NOT NULL PRIMARY KEY,
+            student_id INTEGER NOT NULL PRIMARY KEY,
             first_name STRING NOT NULL,
             last_name STRING NOT NULL,
             date_of_birth STRING NOT NULL,
@@ -38,7 +38,7 @@ class Database:
 
         self.cursor.execute("""
             CREATE TABLE Teachers (
-            teacher_id INTERGER NOT NULL PRIMARY KEY,
+            teacher_id INTEGER NOT NULL PRIMARY KEY,
             first_name STRING NOT NULL,
             last_name STRING NOT NULL,
             department STRING NOT NULL,
@@ -48,33 +48,33 @@ class Database:
 
         self.cursor.execute("""
             CREATE TABLE Enrollments (
-            enrollment_id INTERGER NOT NULL PRIMARY KEY,
-            student_id INTERGER NOT NULL,
-            course_id INTERGER NOT NULL,
+            enrollment_id INTEGER NOT NULL PRIMARY KEY,
+            student_id INTEGER NOT NULL,
+            course_id INTEGER NOT NULL,
             enrollment_date STRING NOT NULL,
-            FOREIGN KEY (student_id) REFERENCES Student(student_id)
+            FOREIGN KEY (student_id) REFERENCES Student(student_id),
             FOREIGN KEY (course_id) REFERENCES Course(course_id)
             );
         """)
 
         self.cursor.execute("""
             CREATE TABLE Course (
-            course_id INTERGER NOT NULL PRIMARY KEY,
+            course_id INTEGER NOT NULL PRIMARY KEY,
             course_name STRING NOT NULL,
             description STRING NOT NULL,
-            credits INTERGER NOT NULL,
-            classroom_id INTERGER NOT NULL,
-            teacher_id INTERGER NOT NULL,
-            FOREIGN KEY (classroom_id) REFERENCES Classroom(classroom_id)
+            credits INTEGER NOT NULL,
+            classroom_id INTEGER NOT NULL,
+            teacher_id INTEGER NOT NULL,
+            FOREIGN KEY (classroom_id) REFERENCES Classroom(classroom_id),
             FOREIGN KEY (teacher_id) REFERENCES Teacher(teacher_id)
             );
         """)
 
         self.cursor.execute("""
             CREATE TABLE Classroom (
-            classroom_id INTERGER NOT NULL PRIMARY KEY,
-            room_number INTERGER NOT NULL,
-            capacity INTERGER NOT NULL,
+            classroom_id INTEGER NOT NULL PRIMARY KEY,
+            room_number INTEGER NOT NULL,
+            capacity INTEGER NOT NULL,
             building_name STRING NOT NULL
             );
         """)
@@ -171,7 +171,7 @@ class Database:
                 continue            
             return user_input
 
-    # Gets user input as an interger and checks its within range
+    # Gets user input as an integer and checks its within range
     def _get_int_input(self, prompt, minimum = None, maximum = None):
         while True:
             try: 
@@ -209,7 +209,7 @@ class Database:
                 print("Please enter a valid email")
 
     # Checks if a given email matches corect email syntax
-    def _is_valid_email(email):
+    def _is_valid_email(self, email):
         # Syntax patern of an email   
         pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     
@@ -224,7 +224,7 @@ class Database:
         while True:
             try:
                 year = int(input("Enter year for " + prompt))
-                month = int(input("Enter mother for " + prompt))
+                month = int(input("Enter month for " + prompt))
                 day = int(input("Enter day for " + prompt))
                 
                 if self._is_valid_date(year, month, day):
@@ -236,7 +236,7 @@ class Database:
                print ("please enter a valid date")
 
     # Checks if a date is valid
-    def _is_valid_date(year, month, day):
+    def _is_valid_date(self, year, month, day):
         try:
             datetime.date(year, month, day)
             return True
@@ -253,7 +253,9 @@ class Database:
                 [
                     self._get_string_input("Please enter the first name of the student to search: "),
                     self._get_string_input("Please enter the last name of the student to search: ")
-                ]                
+                ],
+                "AND" 
+
             )
             if student_id is not None:
                 return student_id
@@ -269,7 +271,8 @@ class Database:
                 [
                     self._get_string_input("Please enter the first name of the teacher to search: "),
                     self._get_string_input("Please enter the last name of the teacher to search: ")
-                ]                
+                ],
+                "AND"                
             )
             if teacher_id is not None:
                 return teacher_id
@@ -282,7 +285,8 @@ class Database:
             course_id = self._query_primary_key(
                 "Course",
                 "course_name",
-                self._get_string_input("Enter the name of the course to search for: ")
+                self._get_string_input("Enter the name of the course to search for: "),
+                "AND"
             )
             if course_id is not None:
                 return course_id
@@ -295,7 +299,8 @@ class Database:
             classroom_id = self._query_primary_key(
                 "Classroom",
                 "room_number",
-                self._get_int_input("Enter the room number of the classroom to search: ")
+                self._get_int_input("Enter the room number of the classroom to search: "),
+                "AND"
             )
             if classroom_id is not None:
                 return classroom_id
