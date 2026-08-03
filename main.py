@@ -5,6 +5,7 @@ import csv
 import re
 import datetime
 
+
 class Database:
     # Setup databse
     def __init__(self):
@@ -20,7 +21,7 @@ class Database:
         self.cursor.execute("DROP TABLE IF EXISTS 'Students';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Teachers';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Enrollments';")
-        self.cursor.execute("DROP TABLE IF EXISTS 'Courese';")
+        self.cursor.execute("DROP TABLE IF EXISTS 'Course';")
         self.cursor.execute("DROP TABLE IF EXISTS 'Classroom';")
 
     # Sets up all tables for the database
@@ -56,7 +57,7 @@ class Database:
             );
         """)
 
-        self.cursor.execute(""" courese
+        self.cursor.execute("""
             CREATE TABLE Course (
             course_id INTERGER NOT NULL PRIMARY KEY,
             course_name STRING NOT NULL,
@@ -86,7 +87,7 @@ class Database:
             ['teacher_id', 'first_name', 'last_name', 'department', 'email'])
         self._import_csv('csv/students_with_pk.csv', 'Students',
             ['student_id', 'first_name', 'last_name', 'date_of_birth', 'email'])
-        self._import_csv('csv/courses_detailed_with_ids.csv', 'Courese',
+        self._import_csv('csv/courses_detailed_with_ids.csv', 'Course',
             ['course_id', 'course_name', 'description', 'credits', 'classroom_id', 'teacher_id'])
         self._import_csv('csv/enrollments_with_pk.csv', 'Enrollments',
             ['enrollment_id', 'student_id', 'course_id', 'enrollment_date'])
@@ -386,18 +387,59 @@ class Database:
     # Search for a list of courses with the room and teacher based on a students name
     def search_course_by_student(self):
         student_id = self._get_student_id()
+        self.cursor.execute("SELECT course_id FROM Enrollments WHERE student_id = ?", (student_id))
+        results = self.cursor.fetchall()
+
         
-
-
     # Search for a list of students based on a teachers name
     def search_student_by_teacher(self):
-        teacher_id = self._get_teacher_id()
+        pass
+
+    # Save and exit
+    def save_and_exit(self):
+        self.connect.commit()
+        self.connect.close()
+        exit()
 
 
 def run():
-    databse = Database()
-    databse.connect.commit()
-    databse.connect.close()
+    database = Database()
+    menu = {
+        "add classroom" : "database.add_classroom()",
+        "add course" : "database.add_course()",
+        "add student" : "database.add_student()",
+        "add teacher" : "database.add_teacher()",
+        "assign classroom to course" : "database.assign_classroom_to_course()",
+        "assign student to course" : "database.assign_student_to_course()",
+        "assign teacher to course" : "database.assign_teacher_to_course()",
+        "search course by student" : "database.search_course_by_student()",
+        "search student by teacher" : "database.search_student_by_teacher()",
+        "save and exit" : "database.save_and_exit()",
+        "exit" : "exit()"
+    }
+
+    while True:    
+        print("Menu:")
+        for item in menu.keys():
+            print(f"  {str(list(menu.keys()).index(item) + 1)}) {item}")   
+
+        while True:
+            to_run = input("\nEnter the function to run: ")
+
+            if to_run == "":
+                print("Please enter a valid function to run")
+            elif to_run in list(menu.keys()):
+                print(f"running - {menu[to_run]}")
+                eval(menu[to_run])
+            elif to_run.isdecimal():
+                if int(to_run) > 0 and int(to_run) <= len(menu):
+                    to_run = list(menu.keys())[int(to_run)-1]
+                    print(f"running - {menu[to_run]}")
+                    eval(menu[to_run])
+                else:
+                    print("Please enter a valid function to run")
+            else:
+                print ("Please enter a valid function to run")
     
 
 if __name__ == "__main__":
