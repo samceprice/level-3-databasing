@@ -4,6 +4,7 @@ import sqlite3
 import csv
 import re
 import datetime
+from tabulate import tabulate
 
 
 class Database:
@@ -248,14 +249,13 @@ class Database:
     def _get_student_id(self):
         while True:
             student_id = self._query_primary_key(
-                "Teachers",
+                "Students",
                 ["first_name", "last_name"],
                 [
-                    self._get_string_input("Please enter the first name of the student to search: "),
-                    self._get_string_input("Please enter the last name of the student to search: ")
+                    self._get_string_input("Please enter the first name of the student to search: ").title(),
+                    self._get_string_input("Please enter the last name of the student to search: ").title()
                 ],
                 "AND" 
-
             )
             if student_id is not None:
                 return student_id
@@ -269,8 +269,8 @@ class Database:
                 "Teachers",
                 ["first_name", "last_name"],
                 [
-                    self._get_string_input("Please enter the first name of the teacher to search: "),
-                    self._get_string_input("Please enter the last name of the teacher to search: ")
+                    self._get_string_input("Please enter the first name of the teacher to search: ").title(),
+                    self._get_string_input("Please enter the last name of the teacher to search: ").title()
                 ],
                 "AND"                
             )
@@ -285,7 +285,7 @@ class Database:
             course_id = self._query_primary_key(
                 "Course",
                 "course_name",
-                self._get_string_input("Enter the name of the course to search for: "),
+                self._get_string_input("Enter the name of the course to search for: ").title(),
                 "AND"
             )
             if course_id is not None:
@@ -339,7 +339,7 @@ class Database:
             "Course",
             ["course_name", "description", "credits", "classroom_id", "teacher_id"],
             [
-                self._get_string_input("Enter the name of the course: "),
+                self._get_string_input("Enter the name of the course: ").title(),
                 self._get_string_input("Enter the description of the course: "),
                 self._get_int_input("Enter the number of credits for the course: ", minimum = 0),
                 self._get_classroom_id(),
@@ -355,7 +355,7 @@ class Database:
             [
                 self._get_int_input("Enter the room number for the classroom: ", minimum = 1),
                 self._get_int_input("Enter the capacity for the classroom: ", minimum = 1),
-                self._get_string_input("Enter the name of the building for the classroom: ")
+                self._get_string_input("Enter the name of the building for the classroom: ").title()
             ]
         )
 
@@ -392,8 +392,23 @@ class Database:
     # Search for a list of courses with the room and teacher based on a students name
     def search_course_by_student(self):
         student_id = self._get_student_id()
-        self.cursor.execute("SELECT course_id FROM Enrollments WHERE student_id = ?", (student_id))
-        results = self.cursor.fetchall()
+
+        self.cursor.execute("""
+            SELECT Course.course_name
+            FROM Enrollments
+            JOIN Course ON Enrollments.course_id = Course.course_id
+            WHERE Enrollments.student_id = ?
+        """, (student_id,))
+
+        courses = self.cursor.fetchall()
+
+        if courses:
+            print("\nThe selected student takes the following courses:")
+            for course in courses:
+                print(f" - {course[0]}")
+        else:
+            print("The selected student is not enrolled in any courses.")
+
 
         
     # Search for a list of students based on a teachers name
