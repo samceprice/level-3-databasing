@@ -4,6 +4,7 @@ import sqlite3
 import csv
 import re
 import datetime
+from tabulate import tabulate
 
 
 class Database:
@@ -175,7 +176,7 @@ class Database:
     def _get_int_input(self, prompt, minimum = None, maximum = None):
         while True:
             try: 
-                user_input = int(input(prompt))
+                user_input = int(input(prompt).strip())
 
                 # Checks if user input fits minimum and maximum values if provided and throws error if out of range
                 if minimum is not None and maximum is not None:
@@ -202,7 +203,7 @@ class Database:
     # Gets user input for an email and checks it matches email syntax
     def _get_email_input(self, prompt):
         while True:
-            user_input = input(prompt)
+            user_input = input(prompt).strip()
             if self._is_valid_email(user_input):
                 return user_input
             else:
@@ -223,9 +224,9 @@ class Database:
         # return as yyyy-mm-dd
         while True:
             try:
-                year = int(input("Enter year for " + prompt))
-                month = int(input("Enter month for " + prompt))
-                day = int(input("Enter day for " + prompt))
+                year = int(input("Enter year for " + prompt).strip())
+                month = int(input("Enter month for " + prompt).strip())
+                day = int(input("Enter day for " + prompt).strip())
                 
                 if self._is_valid_date(year, month, day):
                     return f"{year:04d}-{month:02d}-{day:02d}"
@@ -325,10 +326,10 @@ class Database:
             "Teachers",
             ["first_name", "last_name", "department", "email"],
             [
-                self._get_string_input("Enter the teachers first name: ").title(),
-                self._get_string_input("Enter the teachers last name: ").title(),
-                self._get_string_input("Enter the teachers department: ").title(),
-                self._get_email_input("Enter the teachers email: ")
+                self._get_string_input("Enter the teachers first name: ").title().strip(),
+                self._get_string_input("Enter the teachers last name: ").title().strip(),
+                self._get_string_input("Enter the teachers department: ").title().strip(),
+                self._get_email_input("Enter the teachers email: ").strip()
             ]
         )
 
@@ -393,18 +394,26 @@ class Database:
         student_id = self._get_student_id()
 
         self.cursor.execute("""
-            SELECT Course.course_name
+            SELECT 
+                Course.course_name,
+                Classroom.room_number,
+                Teachers.first_name || ' ' || Teachers.last_name AS teacher_name
             FROM Enrollments
             JOIN Course ON Enrollments.course_id = Course.course_id
+            JOIN Classroom ON Course.classroom_id = Classroom.classroom_id
+            JOIN Teachers ON Course.teacher_id = Teachers.teacher_id
             WHERE Enrollments.student_id = ?
         """, (student_id,))
 
         courses = self.cursor.fetchall()
 
         if courses:
-            print("\nThe selected student takes the following courses:")
-            for course in courses:
-                print(f" - {course[0]}")
+            print("\nThe selected student takes the following courses:\n")
+            print(tabulate(
+                courses,
+                headers=["Course", "Room", "Teacher"],
+                tablefmt="simple"
+            ))
         else:
             print("The selected student is not enrolled in any courses.")
         
@@ -415,17 +424,20 @@ class Database:
         self.cursor.execute("""
             SELECT Students.first_name, Students.last_name
             FROM Enrollments
-            JOIN Students on Enrollments.student_id = Students.student_id 
-            JOIN Course on Enrollments.course_id = Course.course_id
+            JOIN Students ON Enrollments.student_id = Students.student_id
+            JOIN Course ON Enrollments.course_id = Course.course_id
             WHERE Course.teacher_id = ?
         """, (teacher_id,))
 
         students = list(set(self.cursor.fetchall()))
 
         if students:
-            print("\nThe selected teacher teaches the following students:")
-            for student in students:
-                print(f" - {student[0]} {student[1]}")
+            print("\nThe selected teacher teaches the following students:\n")
+            print(tabulate(
+                students,
+                headers=["First Name", "Last Name"],
+                tablefmt="simple"
+            ))
         else:
             print("The selected teacher does not teach any students.")
 
@@ -458,17 +470,15 @@ def run():
             print(f"  {str(list(menu.keys()).index(item) + 1)}) {item}")   
 
         while True:
-            to_run = input("\nEnter the function to run: ")
+            to_run = input("\nEnter the function to run: ").lower().strip()
 
             if to_run == "":
                 print("Please enter a valid function to run")
             elif to_run in list(menu.keys()):
-                print(f"running - {menu[to_run]}")
                 eval(menu[to_run])
             elif to_run.isdecimal():
                 if int(to_run) > 0 and int(to_run) <= len(menu):
                     to_run = list(menu.keys())[int(to_run)-1]
-                    print(f"running - {menu[to_run]}")
                     eval(menu[to_run])
                 else:
                     print("Please enter a valid function to run")
