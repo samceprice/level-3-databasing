@@ -4,7 +4,6 @@ import sqlite3
 import csv
 import re
 import datetime
-from tabulate import tabulate
 
 
 class Database:
@@ -408,12 +407,27 @@ class Database:
                 print(f" - {course[0]}")
         else:
             print("The selected student is not enrolled in any courses.")
-
-
         
     # Search for a list of students based on a teachers name
     def search_student_by_teacher(self):
-        pass
+        teacher_id = self._get_teacher_id()
+
+        self.cursor.execute("""
+            SELECT Students.first_name, Students.last_name
+            FROM Enrollments
+            JOIN Students on Enrollments.student_id = Students.student_id 
+            JOIN Course on Enrollments.course_id = Course.course_id
+            WHERE Course.teacher_id = ?
+        """, (teacher_id,))
+
+        students = list(set(self.cursor.fetchall()))
+
+        if students:
+            print("\nThe selected teacher teaches the following students:")
+            for student in students:
+                print(f" - {student[0]} {student[1]}")
+        else:
+            print("The selected teacher does not teach any students.")
 
     # Save and exit
     def save_and_exit(self):
