@@ -7,6 +7,7 @@ import datetime
 from tabulate import tabulate
 
 
+#
 class Database:
     # Setup databse
     def __init__(self):
@@ -53,7 +54,7 @@ class Database:
             student_id INTEGER NOT NULL,
             course_id INTEGER NOT NULL,
             enrollment_date STRING NOT NULL,
-            FOREIGN KEY (student_id) REFERENCES Student(student_id),
+            FOREIGN KEY (student_id) REFERENCES Students(student_id),
             FOREIGN KEY (course_id) REFERENCES Course(course_id)
             );
         """)
@@ -67,7 +68,7 @@ class Database:
             classroom_id INTEGER NOT NULL,
             teacher_id INTEGER NOT NULL,
             FOREIGN KEY (classroom_id) REFERENCES Classroom(classroom_id),
-            FOREIGN KEY (teacher_id) REFERENCES Teacher(teacher_id)
+            FOREIGN KEY (teacher_id) REFERENCES Teachers(teacher_id)
             );
         """)
 
@@ -82,16 +83,21 @@ class Database:
 
     # Populates tables for the database with base data from csv files
     def _populate_tables_from_csv(self):
-        self._import_csv('csv/classrooms_with_pk.csv', 'Classroom',
-            ['classroom_id', 'room_number', 'capacity', 'building_name'])
-        self._import_csv('csv/teachers_with_pk.csv', 'Teachers',
-            ['teacher_id', 'first_name', 'last_name', 'department', 'email'])
-        self._import_csv('csv/students_with_pk.csv', 'Students',
-            ['student_id', 'first_name', 'last_name', 'date_of_birth', 'email'])
-        self._import_csv('csv/courses_detailed_with_ids.csv', 'Course',
-            ['course_id', 'course_name', 'description', 'credits', 'classroom_id', 'teacher_id'])
-        self._import_csv('csv/enrollments_with_pk.csv', 'Enrollments',
-            ['enrollment_id', 'student_id', 'course_id', 'enrollment_date'])
+        try:
+            self._import_csv('./csv/classrooms_with_pk.csv', 'Classroom',
+                ['classroom_id', 'room_number', 'capacity', 'building_name'])
+            self._import_csv('./csv/teachers_with_pk.csv', 'Teachers',
+                ['teacher_id', 'first_name', 'last_name', 'department', 'email'])
+            self._import_csv('./csv/students_with_pk.csv', 'Students',
+                ['student_id', 'first_name', 'last_name', 'date_of_birth', 'email'])
+            self._import_csv('./csv/courses_detailed_with_ids.csv', 'Course',
+                ['course_id', 'course_name', 'description', 'credits', 'classroom_id', 'teacher_id'])
+            self._import_csv('./csv/enrollments_with_pk.csv', 'Enrollments',
+                ['enrollment_id', 'student_id', 'course_id', 'enrollment_date'])
+            
+        except FileNotFoundError:
+            print("csv files not found please ensure that the csv files exists and are named correctly")
+            self.save_and_exit()
 
     # Internal Funciton to import csv into a table from given data
     def _import_csv(self, csv_path, table_name, columns):
@@ -422,7 +428,9 @@ class Database:
         teacher_id = self._get_teacher_id()
 
         self.cursor.execute("""
-            SELECT Students.first_name, Students.last_name
+            SELECT 
+                Students.first_name,
+                Students.last_name
             FROM Enrollments
             JOIN Students ON Enrollments.student_id = Students.student_id
             JOIN Course ON Enrollments.course_id = Course.course_id
@@ -450,40 +458,42 @@ class Database:
 
 def run():
     database = Database()
-    menu = {
-        "add classroom" : "database.add_classroom()",
-        "add course" : "database.add_course()",
-        "add student" : "database.add_student()",
-        "add teacher" : "database.add_teacher()",
-        "assign classroom to course" : "database.assign_classroom_to_course()",
-        "assign student to course" : "database.assign_student_to_course()",
-        "assign teacher to course" : "database.assign_teacher_to_course()",
-        "search course by student" : "database.search_course_by_student()",
-        "search student by teacher" : "database.search_student_by_teacher()",
-        "save and exit" : "database.save_and_exit()",
-        "exit" : "exit()"
-    }
+    menu = [
+        name for name in dir(database)
+        if callable(getattr(database, name))
+        and not name.startswith("_")
+        and not name == "connect"
+        and not name == "save_and_exit"
+    ]
+
+    menu.append("save_and_exit")
 
     while True:    
         print("Menu:")
-        for item in menu.keys():
-            print(f"  {str(list(menu.keys()).index(item) + 1)}) {item}")   
+        for item in menu:
+            print(f"  {str(menu.index(item) + 1)}) {item.replace("_", " ").title()}")   
 
-        while True:
-            to_run = input("\nEnter the function to run: ").lower().strip()
+        try:
+            while True:
+                to_run = input("\nEnter the function to run: ").lower().strip().replace(" ", "_")
 
-            if to_run == "":
-                print("Please enter a valid function to run")
-            elif to_run in list(menu.keys()):
-                eval(menu[to_run])
-            elif to_run.isdecimal():
-                if int(to_run) > 0 and int(to_run) <= len(menu):
-                    to_run = list(menu.keys())[int(to_run)-1]
-                    eval(menu[to_run])
-                else:
+                if to_run == "":
                     print("Please enter a valid function to run")
-            else:
-                print ("Please enter a valid function to run")
+                elif to_run in menu:
+                    getattr(database, menu[menu.index(to_run)])()
+                    database.connect.commit()
+                elif to_run.isdecimal():
+                    if int(to_run) > 0 and int(to_run) <= len(menu):
+                        getattr(database, menu[int(to_run) - 1])()
+                        database.connect.commit()
+                    else:
+                        print("Please enter a valid function to run")
+                else:
+                    print ("Please enter a valid function to run")
+
+        except KeyboardInterrupt or EOFError:
+            print("\nSaving and exiting")
+            database.save_and_exit()
     
 
 if __name__ == "__main__":
