@@ -1,4 +1,4 @@
-"""
+""" A script for creating, populating, and interacting with a database.
 """
 import sqlite3
 import csv
@@ -7,7 +7,7 @@ import datetime
 from tabulate import tabulate
 
 
-#
+# The main object for the database
 class Database:
     # Setup databse
     def __init__(self):
